@@ -1,7 +1,11 @@
+import Script from "next/script";
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
+
+
+
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -36,6 +40,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
+      <head>
+  <Script
+    async
+    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3080260484619889"
+    crossOrigin="anonymous"
+    strategy="afterInteractive"
+  />
+</head>
       <body className="font-sans antialiased">
         {children}
         <Analytics />
