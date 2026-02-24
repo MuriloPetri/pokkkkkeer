@@ -9,7 +9,7 @@ export default function Contato() {
       </p>
 
       <p className="font-semibold">
-        murilomauriciopetri@email.com
+        murilopeti@email.com
       </p>
 
       <p>
