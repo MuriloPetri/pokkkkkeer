@@ -33,7 +33,7 @@ export default function RootLayout({
         <Analytics />
         <footer className="mt-20 p-6 text-center text-sm border-t">
   <div className="space-x-4">
-    <a href="/layout"> Inicio</a>
+    <a href="/page"> Inicio</a>
     <a href="/sobre">Sobre</a>
     <a href="/politica-de-privacidade">Política de Privacidade</a>
     <a href="/termos-de-uso">Termos de Uso</a>
