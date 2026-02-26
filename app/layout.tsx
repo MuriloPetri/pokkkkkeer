@@ -2,14 +2,32 @@ import Script from "next/script";
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { SiteHeader } from '@/components/site-header'
+import { SiteFooter } from '@/components/site-footer'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Treinador de Poker - Tabelas de Ranges Preflop',
-  description: 'Treine suas decisoes de poker preflop com tabelas de ranges interativas.',
+  title: {
+    default: 'Poker Range Trainer - Aprenda Ranges Preflop de Poker',
+    template: '%s | Poker Range Trainer',
+  },
+  description: 'Ferramenta gratuita para estudar e treinar ranges de poker preflop. Tabelas interativas para 6-Max, 9-Max e Heads-Up. Melhore suas decisoes preflop com exercicios praticos.',
+  keywords: ['poker', 'ranges', 'preflop', 'treinamento', 'poker range', 'tabela de ranges', '6-max', '9-max', 'heads-up', 'estrategia poker', 'RFI', '3-bet'],
+  authors: [{ name: 'Poker Range Trainer' }],
+  openGraph: {
+    title: 'Poker Range Trainer - Aprenda Ranges Preflop de Poker',
+    description: 'Ferramenta gratuita para estudar e treinar ranges de poker preflop. Tabelas interativas para 6-Max, 9-Max e Heads-Up.',
+    type: 'website',
+    locale: 'pt_BR',
+    siteName: 'Poker Range Trainer',
+  },
+}
+
+export const viewport = {
+  themeColor: '#1a1a2e',
 }
 
 export default function RootLayout({
@@ -19,7 +37,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased flex flex-col min-h-screen">
         
         {/* AdSense */}
         <Script
@@ -29,7 +47,11 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
 
-        {children}
+        <SiteHeader />
+        <div className="flex-1">
+          {children}
+        </div>
+        <SiteFooter />
         <Analytics />
       </body>
     </html>
