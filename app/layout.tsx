@@ -1,4 +1,3 @@
-import Script from "next/script";
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
@@ -37,16 +36,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className="font-sans antialiased flex flex-col min-h-screen">
-        
-        {/* AdSense */}
-        <Script
+      <head>
+        <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3080260484619889"
-          strategy="afterInteractive"
           crossOrigin="anonymous"
         />
-
+      </head>
+      <body className="font-sans antialiased flex flex-col min-h-screen">
         <SiteHeader />
         <div className="flex-1">
           {children}
