@@ -1,4 +1,6 @@
 import { PokerTrainer } from "@/components/poker-trainer"
+import { PixPaymentModal } from "@/components/pix-payment-modal"
+import { Trophy, Zap, ShieldCheck } from "lucide-react"
 
 export default function Page() {
   return (
@@ -139,6 +141,64 @@ export default function Page() {
 
       </section>
 
+      {/* Seção Premium / Pagamento */}
+      <section className="w-full max-w-5xl mx-auto my-20 px-6">
+        <div className="bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 rounded-3xl overflow-hidden shadow-2xl relative">
+          <div className="absolute top-0 right-0 p-8 opacity-10">
+            <Trophy className="w-64 h-64 text-green-500" />
+          </div>
+          
+          <div className="p-8 md:p-12 relative z-10">
+            <div className="flex flex-col md:flex-row items-center gap-12">
+              <div className="flex-1 space-y-6">
+                <div className="inline-flex items-center gap-2 bg-green-500/10 text-green-500 px-4 py-1.5 rounded-full text-sm font-bold uppercase tracking-wider">
+                  <Zap className="w-4 h-4" />
+                  Oferta Limitada
+                </div>
+                <h2 className="text-4xl md:text-5xl font-extrabold text-white leading-tight">
+                  Eleve seu jogo para o <span className="text-green-500">Nível Profissional</span>
+                </h2>
+                <p className="text-zinc-400 text-lg leading-relaxed">
+                  Tenha acesso a todos os ranges avançados, simulador de 3-bet e dicas exclusivas para dominar as mesas de Texas Hold’em.
+                </p>
+                <ul className="space-y-4">
+                  {[
+                    "Ranges GTO Otimizados",
+                    "Simulador de 3-bet e 4-bet",
+                    "Acesso vitalício às atualizações",
+                    "Suporte prioritário via WhatsApp"
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-center gap-3 text-zinc-300">
+                      <ShieldCheck className="w-5 h-5 text-green-500" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              
+              <div className="w-full md:w-auto bg-zinc-950/50 p-8 rounded-2xl border border-zinc-800 text-center space-y-6">
+                <div className="space-y-1">
+                  <span className="text-zinc-500 line-through text-lg">R$ 97,00</span>
+                  <div className="text-6xl font-black text-white italic">R$ 47</div>
+                  <p className="text-zinc-400 text-sm">Pagamento único via PIX</p>
+                </div>
+                
+                <PixPaymentModal 
+                  pixKey="seu-email@exemplo.com" // O usuário deve trocar isso
+                  amount="47,00"
+                  productName="Acesso Premium Poker Trainer"
+                />
+                
+                <p className="text-zinc-500 text-xs">
+                  Liberação manual em até 30 minutos após o envio do comprovante.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </main>
   )
 }
+

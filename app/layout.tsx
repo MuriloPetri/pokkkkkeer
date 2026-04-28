@@ -2,7 +2,9 @@ import Script from "next/script";
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { Toaster } from 'sonner'
 import './globals.css'
+
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -41,7 +43,9 @@ export default function RootLayout({
         />
 
         {children}
+        <Toaster position="top-center" richColors />
         <Analytics />
+
         <footer className="mt-20 p-6 text-center text-sm border-t">
   <div className="space-x-4">
     <a href="/"> Inicio</a>
