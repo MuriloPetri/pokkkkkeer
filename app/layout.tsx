@@ -8,9 +8,20 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Treinador de Poker - Tabelas de Ranges Preflop',
-  description: 'Treine suas decisoes de poker preflop com tabelas de ranges interativas.',
-}
+  title: "Treinador de Poker - Tabelas de Ranges Preflop",
+  description: "Treine suas decisoes de poker preflop com tabelas de ranges interativas.",
+  manifest: "/manifest.json",
+  themeColor: "#052e16",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "PokerTrainer",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
 
 export default function RootLayout({
   children,
