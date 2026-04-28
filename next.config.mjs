@@ -20,7 +20,10 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Turbopack empty config to acknowledge its usage with custom webpack (PWA)
+  turbopack: {},
 }
+
 
 export default withPWA(nextConfig);
 
