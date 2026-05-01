@@ -232,7 +232,11 @@ const FACING_3BET_6MAX: Record<Position, Record<string, Action>> = {
     ['AA', 'KK', 'QQ', 'AKs', 'AKo'],
     ['JJ', 'TT', '99', '88', 'AQs', 'AJs', 'ATs', 'A5s', 'A4s', 'KQs', 'KJs', 'QJs', 'JTs', 'T9s', '98s', 'AQo', 'AJo', 'KQo']
   ),
-  BB: buildFacing3BetRange([], []),
+  // BB squeezed/3-bet and faces a 4-bet — GTO range: 4-bet with premiums + bluffs (A5s/A4s blockers)
+  BB: buildFacing3BetRange(
+    ['AA', 'KK', 'AKs', 'A5s', 'A4s'],
+    ['QQ', 'JJ', 'TT', 'AKo', 'AQs', 'AJs', 'KQs']
+  ),
   UTG1: buildFacing3BetRange([], []),
   UTG2: buildFacing3BetRange([], []),
   LJ: buildFacing3BetRange([], []),
@@ -395,7 +399,11 @@ const FACING_3BET_9MAX: Record<Position, Record<string, Action>> = {
     ['AA', 'KK', 'QQ', 'AKs', 'AKo'],
     ['JJ', 'TT', '99', '88', 'AQs', 'AJs', 'ATs', 'A5s', 'A4s', 'KQs', 'KJs', 'QJs', 'JTs', 'T9s', '98s', 'AQo', 'AJo', 'KQo']
   ),
-  BB: buildFacing3BetRange([], []),
+  // BB squeezed and faces a 4-bet — tighter than 6-max (full ring)
+  BB: buildFacing3BetRange(
+    ['AA', 'KK', 'AKs', 'A5s'],
+    ['QQ', 'JJ', 'AKo', 'AQs', 'AJs']
+  ),
   MP: buildFacing3BetRange([], []),
 }
 
@@ -485,7 +493,11 @@ const FACING_3BET_HU: Record<Position, Record<string, Action>> = {
     ['AA', 'KK', 'QQ', 'JJ', 'TT', 'AKs', 'AKo', 'AQs', 'A5s', 'A4s'],
     ['99', '88', '77', '66', '55', 'AQo', 'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A3s', 'A2s', 'KQs', 'KJs', 'KTs', 'K9s', 'K8s', 'QJs', 'QTs', 'Q9s', 'JTs', 'J9s', 'T9s', 'T8s', '98s', '97s', '87s', '86s', '76s', '75s', '65s', '64s', '54s', '53s', '43s', 'AJo', 'ATo', 'A9o', 'KQo', 'KJo', 'KTo', 'QJo', 'QTo', 'JTo']
   ),
-  BB: buildFacing3BetRange([], []),
+  // HU BB 3-bet BTN open, BTN 4-bets — BB has wide 5-bet range in HU
+  BB: buildFacing3BetRange(
+    ['AA', 'KK', 'QQ', 'AKs', 'A5s', 'A4s', 'A3s'],
+    ['JJ', 'TT', '99', 'AKo', 'AQs', 'AJs', 'ATs', 'KQs', 'KJs']
+  ),
   UTG: buildFacing3BetRange([], []),
   UTG1: buildFacing3BetRange([], []),
   UTG2: buildFacing3BetRange([], []),
@@ -615,3 +627,19 @@ export function getHandTip(hand: string, action: Action, scenario: Scenario): st
   return ''
 }
 
+/**
+ * Returns whether a scenario makes strategic sense for a given
+ * position and table size. Used to disable irrelevant scenarios in the UI.
+ */
+export function isScenarioApplicable(position: Position, scenario: Scenario, tableSize: TableSize): boolean {
+  // BB has no RFI — they're last to act and already have money in the pot
+  if (position === 'BB' && scenario === 'RFI') return false
+
+  // UTG acts before all other players — can't face an open raise
+  if (position === 'UTG' && scenario === 'vs3Bet') return false
+
+  // In HU, the BTN/SB acts FIRST preflop — they can't face an open from BB
+  if (tableSize === 'headsup' && position === 'BTN' && scenario === 'vs3Bet') return false
+
+  return true
+}

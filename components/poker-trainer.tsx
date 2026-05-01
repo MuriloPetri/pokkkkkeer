@@ -12,6 +12,7 @@ import {
   getActionLabel,
   getHandTip,
   getComboCount,
+  isScenarioApplicable,
 } from "@/lib/poker-ranges"
 import { RangeChart } from "./range-chart"
 import { PositionSelector } from "./position-selector"
@@ -54,12 +55,12 @@ export function PokerTrainer() {
     }
   }, [tableSize, position])
 
-  // If UTG is selected and scenario is vs3Bet (not applicable), switch to RFI
+  // If current scenario doesn't apply to the new position/tableSize, reset to RFI
   useEffect(() => {
-    if (['UTG', 'UTG1', 'UTG2'].includes(position) && scenario === 'vs3Bet') {
+    if (!isScenarioApplicable(position, scenario, tableSize)) {
       setScenario('RFI')
     }
-  }, [position, scenario])
+  }, [position, scenario, tableSize])
 
   // Clear filter and selection when scenario/position changes
   useEffect(() => {
@@ -159,7 +160,7 @@ export function PokerTrainer() {
                 onSelect={setPosition}
                 tableSize={tableSize}
               />
-              <ScenarioSelector selected={scenario} onSelect={setScenario} position={position} />
+              <ScenarioSelector selected={scenario} onSelect={setScenario} position={position} tableSize={tableSize} />
               <RangeLegend
                 range={range}
                 scenario={scenario}
