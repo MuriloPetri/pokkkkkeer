@@ -99,8 +99,8 @@ export async function POST(req: NextRequest) {
       qrCodeBase64: transactionData?.qr_code_base64,
       status: data.status, // "pending"
     })
-  } catch (err) {
+  } catch (err: any) {
     console.error("[pix/create]", err)
-    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
+    return NextResponse.json({ error: `Erro interno do servidor: ${err?.message || "Desconhecido"}` }, { status: 500 })
   }
 }
