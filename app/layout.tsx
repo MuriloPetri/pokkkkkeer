@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from 'sonner'
+import { PixGate } from '@/components/pix-gate'
 import './globals.css'
 
 
@@ -42,19 +43,20 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
 
-        {children}
+        <PixGate>
+          {children}
+          <footer className="mt-20 p-6 text-center text-sm border-t">
+            <div className="space-x-4">
+              <a href="/"> Inicio</a>
+              <a href="/sobre">Sobre</a>
+              <a href="/politica-de-privacidade">Política de Privacidade</a>
+              <a href="/termos-de-uso">Termos de Uso</a>
+              <a href="/contato">Contato</a>
+            </div>
+          </footer>
+        </PixGate>
         <Toaster position="top-center" richColors />
         <Analytics />
-
-        <footer className="mt-20 p-6 text-center text-sm border-t">
-  <div className="space-x-4">
-    <a href="/"> Inicio</a>
-    <a href="/sobre">Sobre</a>
-    <a href="/politica-de-privacidade">Política de Privacidade</a>
-    <a href="/termos-de-uso">Termos de Uso</a>
-    <a href="/contato">Contato</a>
-  </div>
-</footer>
       </body>
     </html>
   )
