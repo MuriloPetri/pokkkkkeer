@@ -564,3 +564,54 @@ export function getRangeStats(range: Record<string, Action>): Record<Action, num
   }
   return stats
 }
+
+/** Returns the number of card combos for a given hand label */
+export function getComboCount(hand: string): number {
+  if (hand.length === 2) return 6           // pair: AA, KK...
+  if (hand.endsWith('s')) return 4          // suited: AKs...
+  return 12                                  // offsuit: AKo...
+}
+
+/** Returns combo stats for the whole range */
+export function getRangeComboStats(range: Record<string, Action>): Record<Action, number> {
+  const stats: Record<Action, number> = { raise: 0, fold: 0, call: 0, '3bet': 0 }
+  for (const [hand, action] of Object.entries(range)) {
+    stats[action] += getComboCount(hand)
+  }
+  return stats
+}
+
+/** Returns a short strategic tip for a hand in a given scenario */
+export function getHandTip(hand: string, action: Action, scenario: Scenario): string {
+  const type = hand.length === 2 ? 'par' : hand.endsWith('s') ? 'suited' : 'offsuit'
+  const rank1 = hand[0]
+  const isPremium = ['AA', 'KK', 'QQ', 'JJ', 'AKs', 'AKo'].includes(hand)
+  const isHighCard = ['A', 'K', 'Q'].includes(rank1)
+
+  if (scenario === 'RFI') {
+    if (action === 'raise') {
+      if (isPremium) return 'Mão premium — sempre abre nessa posição'
+      if (type === 'par') return 'Par — bom valor pré-flop, abre sempre'
+      if (type === 'suited') return 'Suited — conectores e dois pares possíveis'
+      return 'Offsuit com valor suficiente para abrir nessa posição'
+    }
+    return 'Fora do range de abertura nessa posição — descarta'
+  }
+
+  if (scenario === 'vs3Bet') {
+    if (action === '3bet') return 'Mão forte o suficiente para 3-bet e isolar o agressor'
+    if (action === 'call') return isHighCard
+      ? 'Mão com bom valor de showdown — paga e avalia no flop'
+      : 'Suited com equity de draw — paga por pot odds'
+    return 'Fora do range de defesa — descarta sem punição'
+  }
+
+  if (scenario === 'facing3Bet') {
+    if (action === 'raise') return 'Mão forte — 4-bet para proteção e valor'
+    if (action === 'call') return 'Mão com equity suficiente — chama e joga no flop'
+    return 'Fora do range defensivo contra o 3-bet — descarta'
+  }
+
+  return ''
+}
+

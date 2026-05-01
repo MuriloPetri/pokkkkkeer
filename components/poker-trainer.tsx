@@ -5,9 +5,13 @@ import {
   type Position,
   type Scenario,
   type TableSize,
+  type Action,
   POSITIONS_BY_TABLE,
   TABLE_SIZE_LABELS,
   getRangeForScenario,
+  getActionLabel,
+  getHandTip,
+  getComboCount,
 } from "@/lib/poker-ranges"
 import { RangeChart } from "./range-chart"
 import { PositionSelector } from "./position-selector"
@@ -15,17 +19,32 @@ import { ScenarioSelector } from "./scenario-selector"
 import { RangeLegend } from "./range-legend"
 import { TrainingMode } from "./training-mode"
 import { cn } from "@/lib/utils"
-import { BookOpen, Crosshair, Users } from "lucide-react"
+import { BookOpen, Crosshair, Users, X } from "lucide-react"
 
 type Tab = "chart" | "training"
 
 const TABLE_SIZES: TableSize[] = ["6max", "9max", "headsup"]
+
+const ACTION_COLORS: Record<Action, string> = {
+  raise:  'bg-[oklch(0.72_0.19_160)] text-[oklch(0.13_0.005_260)]',
+  '3bet': 'bg-[oklch(0.75_0.15_55)] text-[oklch(0.13_0.005_260)]',
+  call:   'bg-[oklch(0.6_0.15_250)] text-white',
+  fold:   'bg-zinc-700 text-zinc-400',
+}
+
+const HAND_TYPE_LABEL: Record<string, string> = {
+  pair: 'Par',
+  suited: 'Suited',
+  offsuit: 'Offsuit',
+}
 
 export function PokerTrainer() {
   const [tab, setTab] = useState<Tab>("chart")
   const [tableSize, setTableSize] = useState<TableSize>("6max")
   const [position, setPosition] = useState<Position>("BTN")
   const [scenario, setScenario] = useState<Scenario>("RFI")
+  const [filterAction, setFilterAction] = useState<Action | null>(null)
+  const [selectedHand, setSelectedHand] = useState<string | null>(null)
 
   // When table size changes, reset position to first valid one
   useEffect(() => {
@@ -35,7 +54,18 @@ export function PokerTrainer() {
     }
   }, [tableSize, position])
 
+  // Clear filter and selection when scenario/position changes
+  useEffect(() => {
+    setFilterAction(null)
+    setSelectedHand(null)
+  }, [position, scenario, tableSize])
+
   const range = getRangeForScenario(position, scenario, tableSize)
+
+  const selectedAction = selectedHand ? (range[selectedHand] || 'fold') : null
+  const selectedType = selectedHand
+    ? selectedHand.length === 2 ? 'pair' : selectedHand.endsWith('s') ? 'suited' : 'offsuit'
+    : null
 
   return (
     <div className="min-h-screen bg-background">
@@ -101,13 +131,13 @@ export function PokerTrainer() {
                     : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                 )}
               >
-                  {TABLE_SIZE_LABELS[size]}
-                </button>
-              ))}
-            </div>
-            <span className="hidden text-[11px] text-muted-foreground sm:inline">
-              {POSITIONS_BY_TABLE[tableSize].length} jogadores na mesa
-            </span>
+                {TABLE_SIZE_LABELS[size]}
+              </button>
+            ))}
+          </div>
+          <span className="hidden text-[11px] text-muted-foreground sm:inline">
+            {POSITIONS_BY_TABLE[tableSize].length} jogadores na mesa
+          </span>
         </div>
       </div>
 
@@ -123,34 +153,89 @@ export function PokerTrainer() {
                 tableSize={tableSize}
               />
               <ScenarioSelector selected={scenario} onSelect={setScenario} />
-              <RangeLegend range={range} scenario={scenario} />
+              <RangeLegend
+                range={range}
+                scenario={scenario}
+                filterAction={filterAction}
+                onFilterChange={setFilterAction}
+              />
             </aside>
 
-            {/* Chart */}
-            <div className="flex-1">
+            {/* Chart + Selected Hand Panel */}
+            <div className="flex-1 flex flex-col gap-4">
+              {/* Chart header */}
               <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
                 <div className="mb-3 flex items-center justify-between">
                   <h2 className="text-sm font-medium text-foreground">
-                    Tabela de Ranges - {position}
+                    Tabela de Ranges — {position}
                   </h2>
                   <div className="flex items-center gap-2">
+                    {filterAction && (
+                      <button
+                        onClick={() => setFilterAction(null)}
+                        className="flex items-center gap-1 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400 hover:text-white transition-colors"
+                      >
+                        <X className="h-2.5 w-2.5" /> Limpar filtro
+                      </button>
+                    )}
                     <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
                       {TABLE_SIZE_LABELS[tableSize]}
                     </span>
                     <span className="text-xs text-muted-foreground">
                       {scenario === "RFI"
-                        ? "Abrir a Mao"
+                        ? "Abrir a Mão"
                         : scenario === "vs3Bet"
                           ? "Contra Raise"
                           : "Contra 3-Bet"}
                     </span>
                   </div>
                 </div>
-                <RangeChart range={range} />
+                <RangeChart
+                  range={range}
+                  scenario={scenario}
+                  filterAction={filterAction}
+                  highlightHand={selectedHand}
+                  onHandClick={(hand) => setSelectedHand(selectedHand === hand ? null : hand)}
+                />
               </div>
 
+              {/* Selected Hand Detail Panel */}
+              {selectedHand && selectedAction && selectedType && (
+                <div className="rounded-xl border border-zinc-700 bg-zinc-900/80 p-4 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      {/* Big hand name */}
+                      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-zinc-800 border border-zinc-700 shadow-inner">
+                        <span className="text-2xl font-black font-mono text-white">{selectedHand}</span>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={cn("rounded-md px-2 py-0.5 text-xs font-bold", ACTION_COLORS[selectedAction])}>
+                            {getActionLabel(selectedAction, scenario)}
+                          </span>
+                          <span className="text-xs text-zinc-500">
+                            {HAND_TYPE_LABEL[selectedType]} · {getComboCount(selectedHand)} combos
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-400 leading-relaxed max-w-xs">
+                          {getHandTip(selectedHand, selectedAction, scenario)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setSelectedHand(null)}
+                      className="shrink-0 rounded-lg p-1.5 text-zinc-600 hover:text-white hover:bg-zinc-800 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Info Section */}
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <InfoCard
                   title="Como ler a tabela"
                   items={[
@@ -164,8 +249,8 @@ export function PokerTrainer() {
                   items={
                     tableSize === "9max"
                       ? [
-                          "9-max tem ranges mais apertados nas posicoes iniciais",
-                          "LJ e HJ sao posicoes intermediarias",
+                          "9-max tem ranges mais apertados nas posições iniciais",
+                          "LJ e HJ são posições intermediárias",
                           "BTN e SB continuam com ranges amplos",
                         ]
                       : tableSize === "headsup"
@@ -175,8 +260,8 @@ export function PokerTrainer() {
                             "BB defende amplo contra raises do BTN",
                           ]
                         : [
-                            "Posicoes iniciais (UTG/MP) = ranges mais apertados",
-                            "Posicoes finais (CO/BTN) = ranges mais amplos",
+                            "Posições iniciais (UTG/MP) = ranges mais apertados",
+                            "Posições finais (CO/BTN) = ranges mais amplos",
                             "Blinds (SB/BB) = defesa e ranges de 3-bet",
                           ]
                   }
