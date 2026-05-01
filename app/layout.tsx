@@ -32,15 +32,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className="font-sans antialiased">
-        
-        {/* AdSense */}
-        <Script
+      <head>
+        {/* AdSense Standard Tag */}
+        <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3080260484619889"
-          strategy="afterInteractive"
           crossOrigin="anonymous"
-        />
+        ></script>
+      </head>
+      <body className="font-sans antialiased">
 
         {children}
         <Toaster position="top-center" richColors />

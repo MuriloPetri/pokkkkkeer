@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Login com sucesso: gera o cookie JWT
-    const jwtToken = signAccessToken("login_auth", safeEmail)
+    const jwtToken = await signAccessToken("login_auth", safeEmail)
     const response = NextResponse.json({ success: true })
     
     response.cookies.set(ACCESS_COOKIE_NAME, jwtToken, {

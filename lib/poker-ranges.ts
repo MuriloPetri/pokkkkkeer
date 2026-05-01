@@ -6,6 +6,9 @@ export type Rank = typeof RANKS[number]
 // Action types
 export type Action = 'raise' | 'fold' | 'call' | '3bet'
 
+// Mixed strategy: can be a single action or multiple actions with frequencies
+export type MixedAction = Action | { action: Action; frequency: number }[]
+
 // Table size
 export type TableSize = '6max' | '9max' | 'headsup'
 
@@ -76,19 +79,26 @@ export const SCENARIO_DESCRIPTIONS: Record<Scenario, string> = {
 
 // ====== RANGE BUILDER HELPERS ======
 
-function buildRFIRange(raiseHands: string[]): Record<string, Action> {
-  const range: Record<string, Action> = {}
+function buildRFIRange(raiseHands: string[], mixedRaise?: Record<string, number>): Record<string, MixedAction> {
+  const range: Record<string, MixedAction> = {}
   for (let row = 0; row < 13; row++) {
     for (let col = 0; col < 13; col++) {
       const label = getHandLabel(row, col)
-      range[label] = raiseHands.includes(label) ? 'raise' : 'fold'
+      if (mixedRaise && mixedRaise[label]) {
+        range[label] = [
+          { action: 'raise', frequency: mixedRaise[label] },
+          { action: 'fold', frequency: 1 - mixedRaise[label] }
+        ]
+      } else {
+        range[label] = raiseHands.includes(label) ? 'raise' : 'fold'
+      }
     }
   }
   return range
 }
 
-function buildVsRaiseRange(threeBetHands: string[], callHands: string[]): Record<string, Action> {
-  const range: Record<string, Action> = {}
+function buildVsRaiseRange(threeBetHands: string[], callHands: string[]): Record<string, MixedAction> {
+  const range: Record<string, MixedAction> = {}
   for (let row = 0; row < 13; row++) {
     for (let col = 0; col < 13; col++) {
       const label = getHandLabel(row, col)
@@ -104,8 +114,8 @@ function buildVsRaiseRange(threeBetHands: string[], callHands: string[]): Record
   return range
 }
 
-function buildFacing3BetRange(fourBetHands: string[], callHands: string[]): Record<string, Action> {
-  const range: Record<string, Action> = {}
+function buildFacing3BetRange(fourBetHands: string[], callHands: string[]): Record<string, MixedAction> {
+  const range: Record<string, MixedAction> = {}
   for (let row = 0; row < 13; row++) {
     for (let col = 0; col < 13; col++) {
       const label = getHandLabel(row, col)
@@ -123,7 +133,7 @@ function buildFacing3BetRange(fourBetHands: string[], callHands: string[]): Reco
 
 // ====== 6-MAX RANGES ======
 
-const RFI_6MAX: Record<Position, Record<string, Action>> = {
+const RFI_6MAX: Record<Position, Record<string, MixedAction>> = {
   UTG: buildRFIRange([
     'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77',
     'AKs', 'AQs', 'AJs', 'ATs', 'A5s', 'A4s', 'A3s', 'A2s',
@@ -174,16 +184,20 @@ const RFI_6MAX: Record<Position, Record<string, Action>> = {
     'KQo', 'KJo', 'KTo', 'K9o',
     'QJo', 'QTo', 'Q9o',
     'JTo', 'J9o', 'T9o', 'T8o', '98o', '87o', '76o',
-  ]),
+  ], {
+    // Exemplo de estratégia mista: 22 abre raise 50% das vezes do SB
+    '22': 0.5,
+    '76o': 0.3,
+  }),
   BB: buildRFIRange([]),
-  // 9-max positions (not used in 6max, but needed for type safety)
+  // 9-max positions
   UTG1: buildRFIRange([]),
   UTG2: buildRFIRange([]),
   LJ: buildRFIRange([]),
   HJ: buildRFIRange([]),
 }
 
-const VS_RAISE_6MAX: Record<Position, Record<string, Action>> = {
+const VS_RAISE_6MAX: Record<Position, Record<string, MixedAction>> = {
   UTG: buildVsRaiseRange([], []),
   MP: buildVsRaiseRange(
     ['AA', 'KK', 'QQ', 'AKs', 'AKo'],
@@ -211,7 +225,7 @@ const VS_RAISE_6MAX: Record<Position, Record<string, Action>> = {
   HJ: buildVsRaiseRange([], []),
 }
 
-const FACING_3BET_6MAX: Record<Position, Record<string, Action>> = {
+const FACING_3BET_6MAX: Record<Position, Record<string, MixedAction>> = {
   UTG: buildFacing3BetRange(
     ['AA', 'KK', 'AKs'],
     ['QQ', 'JJ', 'TT', 'AQs', 'AJs', 'AKo', 'KQs']
@@ -232,7 +246,6 @@ const FACING_3BET_6MAX: Record<Position, Record<string, Action>> = {
     ['AA', 'KK', 'QQ', 'AKs', 'AKo'],
     ['JJ', 'TT', '99', '88', 'AQs', 'AJs', 'ATs', 'A5s', 'A4s', 'KQs', 'KJs', 'QJs', 'JTs', 'T9s', '98s', 'AQo', 'AJo', 'KQo']
   ),
-  // BB squeezed/3-bet and faces a 4-bet — GTO range: 4-bet with premiums + bluffs (A5s/A4s blockers)
   BB: buildFacing3BetRange(
     ['AA', 'KK', 'AKs', 'A5s', 'A4s'],
     ['QQ', 'JJ', 'TT', 'AKo', 'AQs', 'AJs', 'KQs']
@@ -243,9 +256,9 @@ const FACING_3BET_6MAX: Record<Position, Record<string, Action>> = {
   HJ: buildFacing3BetRange([], []),
 }
 
-// ====== 9-MAX RANGES (Full Ring - tighter) ======
+// ====== 9-MAX RANGES ======
 
-const RFI_9MAX: Record<Position, Record<string, Action>> = {
+const RFI_9MAX: Record<Position, Record<string, MixedAction>> = {
   UTG: buildRFIRange([
     'AA', 'KK', 'QQ', 'JJ', 'TT', '99',
     'AKs', 'AQs', 'AJs', 'ATs',
@@ -329,7 +342,7 @@ const RFI_9MAX: Record<Position, Record<string, Action>> = {
   MP: buildRFIRange([]),
 }
 
-const VS_RAISE_9MAX: Record<Position, Record<string, Action>> = {
+const VS_RAISE_9MAX: Record<Position, Record<string, MixedAction>> = {
   UTG: buildVsRaiseRange([], []),
   UTG1: buildVsRaiseRange(
     ['AA', 'KK', 'QQ', 'AKs'],
@@ -366,7 +379,7 @@ const VS_RAISE_9MAX: Record<Position, Record<string, Action>> = {
   MP: buildVsRaiseRange([], []),
 }
 
-const FACING_3BET_9MAX: Record<Position, Record<string, Action>> = {
+const FACING_3BET_9MAX: Record<Position, Record<string, MixedAction>> = {
   UTG: buildFacing3BetRange(
     ['AA', 'KK'],
     ['QQ', 'JJ', 'AKs', 'AQs', 'AKo']
@@ -399,7 +412,6 @@ const FACING_3BET_9MAX: Record<Position, Record<string, Action>> = {
     ['AA', 'KK', 'QQ', 'AKs', 'AKo'],
     ['JJ', 'TT', '99', '88', 'AQs', 'AJs', 'ATs', 'A5s', 'A4s', 'KQs', 'KJs', 'QJs', 'JTs', 'T9s', '98s', 'AQo', 'AJo', 'KQo']
   ),
-  // BB squeezed and faces a 4-bet — tighter than 6-max (full ring)
   BB: buildFacing3BetRange(
     ['AA', 'KK', 'AKs', 'A5s'],
     ['QQ', 'JJ', 'AKo', 'AQs', 'AJs']
@@ -409,7 +421,7 @@ const FACING_3BET_9MAX: Record<Position, Record<string, Action>> = {
 
 // ====== HEADS-UP RANGES ======
 
-const RFI_HU: Record<Position, Record<string, Action>> = {
+const RFI_HU: Record<Position, Record<string, MixedAction>> = {
   BTN: buildRFIRange([
     'AA', 'KK', 'QQ', 'JJ', 'TT', '99', '88', '77', '66', '55', '44', '33', '22',
     'AKs', 'AQs', 'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s',
@@ -437,7 +449,6 @@ const RFI_HU: Record<Position, Record<string, Action>> = {
     '43o',
   ]),
   BB: buildRFIRange([]),
-  // Unused positions
   UTG: buildRFIRange([]),
   UTG1: buildRFIRange([]),
   UTG2: buildRFIRange([]),
@@ -448,7 +459,7 @@ const RFI_HU: Record<Position, Record<string, Action>> = {
   SB: buildRFIRange([]),
 }
 
-const VS_RAISE_HU: Record<Position, Record<string, Action>> = {
+const VS_RAISE_HU: Record<Position, Record<string, MixedAction>> = {
   BTN: buildVsRaiseRange([], []),
   BB: buildVsRaiseRange(
     ['AA', 'KK', 'QQ', 'JJ', 'TT', 'AKs', 'AKo', 'AQs', 'AQo', 'AJs', 'A5s', 'A4s', 'A3s', 'K9s'],
@@ -488,12 +499,11 @@ const VS_RAISE_HU: Record<Position, Record<string, Action>> = {
   SB: buildVsRaiseRange([], []),
 }
 
-const FACING_3BET_HU: Record<Position, Record<string, Action>> = {
+const FACING_3BET_HU: Record<Position, Record<string, MixedAction>> = {
   BTN: buildFacing3BetRange(
     ['AA', 'KK', 'QQ', 'JJ', 'TT', 'AKs', 'AKo', 'AQs', 'A5s', 'A4s'],
     ['99', '88', '77', '66', '55', 'AQo', 'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A3s', 'A2s', 'KQs', 'KJs', 'KTs', 'K9s', 'K8s', 'QJs', 'QTs', 'Q9s', 'JTs', 'J9s', 'T9s', 'T8s', '98s', '97s', '87s', '86s', '76s', '75s', '65s', '64s', '54s', '53s', '43s', 'AJo', 'ATo', 'A9o', 'KQo', 'KJo', 'KTo', 'QJo', 'QTo', 'JTo']
   ),
-  // HU BB 3-bet BTN open, BTN 4-bets — BB has wide 5-bet range in HU
   BB: buildFacing3BetRange(
     ['AA', 'KK', 'QQ', 'AKs', 'A5s', 'A4s', 'A3s'],
     ['JJ', 'TT', '99', 'AKo', 'AQs', 'AJs', 'ATs', 'KQs', 'KJs']
@@ -510,13 +520,13 @@ const FACING_3BET_HU: Record<Position, Record<string, Action>> = {
 
 // ====== RANGE RETRIEVAL ======
 
-const RANGES: Record<TableSize, { rfi: Record<Position, Record<string, Action>>; vsRaise: Record<Position, Record<string, Action>>; facing3Bet: Record<Position, Record<string, Action>> }> = {
+const RANGES: Record<TableSize, { rfi: Record<Position, Record<string, MixedAction>>; vsRaise: Record<Position, Record<string, MixedAction>>; facing3Bet: Record<Position, Record<string, MixedAction>> }> = {
   '6max': { rfi: RFI_6MAX, vsRaise: VS_RAISE_6MAX, facing3Bet: FACING_3BET_6MAX },
   '9max': { rfi: RFI_9MAX, vsRaise: VS_RAISE_9MAX, facing3Bet: FACING_3BET_9MAX },
   'headsup': { rfi: RFI_HU, vsRaise: VS_RAISE_HU, facing3Bet: FACING_3BET_HU },
 }
 
-export function getRangeForScenario(position: Position, scenario: Scenario, tableSize: TableSize = '6max'): Record<string, Action> {
+export function getRangeForScenario(position: Position, scenario: Scenario, tableSize: TableSize = '6max'): Record<string, MixedAction> {
   const tableRanges = RANGES[tableSize]
   switch (scenario) {
     case 'RFI':
@@ -569,10 +579,16 @@ export function getRandomHand(): { row: number; col: number; label: string } {
   return { row, col, label: getHandLabel(row, col) }
 }
 
-export function getRangeStats(range: Record<string, Action>): Record<Action, number> {
+export function getRangeStats(range: Record<string, MixedAction>): Record<Action, number> {
   const stats: Record<Action, number> = { raise: 0, fold: 0, call: 0, '3bet': 0 }
-  for (const action of Object.values(range)) {
-    stats[action]++
+  for (const mixedAction of Object.values(range)) {
+    if (typeof mixedAction === 'string') {
+      stats[mixedAction]++
+    } else {
+      // For stats, we count the primary action (highest frequency)
+      const primary = mixedAction.reduce((prev, curr) => curr.frequency > prev.frequency ? curr : prev)
+      stats[primary.action]++
+    }
   }
   return stats
 }
@@ -585,10 +601,17 @@ export function getComboCount(hand: string): number {
 }
 
 /** Returns combo stats for the whole range */
-export function getRangeComboStats(range: Record<string, Action>): Record<Action, number> {
+export function getRangeComboStats(range: Record<string, MixedAction>): Record<Action, number> {
   const stats: Record<Action, number> = { raise: 0, fold: 0, call: 0, '3bet': 0 }
-  for (const [hand, action] of Object.entries(range)) {
-    stats[action] += getComboCount(hand)
+  for (const [hand, mixedAction] of Object.entries(range)) {
+    const combos = getComboCount(hand)
+    if (typeof mixedAction === 'string') {
+      stats[mixedAction] += combos
+    } else {
+      for (const { action, frequency } of mixedAction) {
+        stats[action] += combos * frequency
+      }
+    }
   }
   return stats
 }
@@ -643,3 +666,4 @@ export function isScenarioApplicable(position: Position, scenario: Scenario, tab
 
   return true
 }
+

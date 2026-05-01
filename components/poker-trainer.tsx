@@ -6,7 +6,9 @@ import {
   type Scenario,
   type TableSize,
   type Action,
+  type MixedAction,
   POSITIONS_BY_TABLE,
+  POSITION_LABELS,
   TABLE_SIZE_LABELS,
   getRangeForScenario,
   getActionLabel,
@@ -20,7 +22,7 @@ import { ScenarioSelector } from "./scenario-selector"
 import { RangeLegend } from "./range-legend"
 import { TrainingMode } from "./training-mode"
 import { cn } from "@/lib/utils"
-import { BookOpen, Crosshair, Users, X } from "lucide-react"
+import { BookOpen, Crosshair, Users, X, Info } from "lucide-react"
 
 type Tab = "chart" | "training"
 
@@ -70,134 +72,153 @@ export function PokerTrainer() {
 
   const range = getRangeForScenario(position, scenario, tableSize)
 
-  const selectedAction = selectedHand ? (range[selectedHand] || 'fold') : null
+  // Extract selected hand info
+  const rawAction = selectedHand ? (range[selectedHand] || 'fold') : null
+  const selectedAction = typeof rawAction === 'string' 
+    ? rawAction 
+    : rawAction 
+      ? rawAction.reduce((prev, curr) => curr.frequency > prev.frequency ? curr : prev).action
+      : null
+  
   const selectedType = selectedHand
     ? selectedHand.length === 2 ? 'pair' : selectedHand.endsWith('s') ? 'suited' : 'offsuit'
     : null
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#09090b] text-zinc-100">
       {/* Header */}
-      <header className="border-b border-border bg-card">
+      <header className="sticky top-0 z-50 border-b border-white/5 bg-zinc-950/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <span className="text-sm font-bold text-primary-foreground font-mono">P</span>
+          <div className="flex items-center gap-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-lg shadow-emerald-500/20">
+              <span className="text-lg font-black text-zinc-950 font-mono">P</span>
             </div>
             <div>
-              <h1 className="text-lg font-bold text-foreground">Treinador de Poker</h1>
-              <p className="hidden text-xs text-muted-foreground sm:block">
-                Range Charts Preflop e Treino
+              <h1 className="text-xl font-black tracking-tight text-white">Pokerzin <span className="text-emerald-500 text-sm font-medium">GTO</span></h1>
+              <p className="hidden text-[10px] uppercase tracking-widest text-zinc-500 sm:block">
+                Advanced Preflop Trainer
               </p>
             </div>
           </div>
 
           {/* Tab Switcher */}
-          <div className="flex items-center gap-1 rounded-lg border border-border bg-secondary/30 p-1">
+          <div className="flex items-center gap-1 rounded-xl border border-white/5 bg-zinc-900/50 p-1 shadow-inner">
             <button
               onClick={() => setTab("chart")}
               className={cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-all",
                 tab === "chart"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-emerald-500 text-zinc-950 shadow-md"
+                  : "text-zinc-400 hover:text-white hover:bg-white/5"
               )}
             >
-              <BookOpen className="h-3.5 w-3.5" />
+              <BookOpen className="h-4 w-4" />
               <span className="hidden sm:inline">Tabelas</span>
             </button>
             <button
               onClick={() => setTab("training")}
               className={cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all",
+                "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-all",
                 tab === "training"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-emerald-500 text-zinc-950 shadow-md"
+                  : "text-zinc-400 hover:text-white hover:bg-white/5"
               )}
             >
-              <Crosshair className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Treino</span>
+              <Crosshair className="h-4 w-4" />
+              <span className="hidden sm:inline">Treinar</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* Table Size Selector - Below header */}
-      <div className="border-b border-border bg-card/60">
-        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2.5 sm:px-6">
-          <Users className="h-4 w-4 text-muted-foreground" />
-          <span className="text-xs font-medium text-muted-foreground">Mesa:</span>
-          <div className="flex items-center gap-1 rounded-lg border border-border bg-secondary/30 p-0.5">
-            {TABLE_SIZES.map((size) => (
-              <button
-                key={size}
-                onClick={() => setTableSize(size)}
-                className={cn(
-                  "rounded-md px-3 py-1 text-xs font-medium transition-all",
-                  tableSize === size
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                )}
-              >
-                {TABLE_SIZE_LABELS[size]}
-              </button>
-            ))}
-          </div>
-          <span className="hidden text-[11px] text-muted-foreground sm:inline">
-            {POSITIONS_BY_TABLE[tableSize].length} jogadores na mesa
-          </span>
-        </div>
-      </div>
-
       {/* Main Content */}
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         {tab === "chart" ? (
-          <div className="flex flex-col gap-6 lg:flex-row">
-            {/* Sidebar */}
-            <aside className="flex w-full flex-col gap-6 lg:w-72 lg:shrink-0">
-              <PositionSelector
-                selected={position}
-                onSelect={setPosition}
-                tableSize={tableSize}
-              />
-              <ScenarioSelector selected={scenario} onSelect={setScenario} position={position} tableSize={tableSize} />
-              <RangeLegend
-                range={range}
-                scenario={scenario}
-                filterAction={filterAction}
-                onFilterChange={setFilterAction}
-              />
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+            {/* Sidebar Controls */}
+            <aside className="lg:col-span-4 flex flex-col gap-6">
+              {/* Table Configuration Card */}
+              <div className="rounded-2xl border border-white/5 bg-zinc-900/40 p-6 shadow-xl backdrop-blur-sm">
+                <div className="mb-6 flex items-center gap-2">
+                  <Users className="h-4 w-4 text-emerald-500" />
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Configuração</h3>
+                </div>
+                
+                <div className="space-y-6">
+                  {/* Table Size */}
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Tamanho da Mesa</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {TABLE_SIZES.map((size) => (
+                        <button
+                          key={size}
+                          onClick={() => setTableSize(size)}
+                          className={cn(
+                            "rounded-lg border py-2 text-xs font-bold transition-all",
+                            tableSize === size
+                              ? "border-emerald-500 bg-emerald-500/10 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
+                              : "border-white/5 bg-white/5 text-zinc-400 hover:border-zinc-700 hover:text-white"
+                          )}
+                        >
+                          {TABLE_SIZE_LABELS[size]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <PositionSelector
+                    selected={position}
+                    onSelect={setPosition}
+                    tableSize={tableSize}
+                  />
+
+                  <div className="h-px bg-white/5 w-full" />
+
+                  <ScenarioSelector selected={scenario} onSelect={setScenario} position={position} tableSize={tableSize} />
+                </div>
+              </div>
+
+              {/* Legend Card */}
+              <div className="rounded-2xl border border-white/5 bg-zinc-900/40 p-6 shadow-xl backdrop-blur-sm">
+                 <RangeLegend
+                  range={range}
+                  scenario={scenario}
+                  filterAction={filterAction}
+                  onFilterChange={setFilterAction}
+                />
+              </div>
             </aside>
 
-            {/* Chart + Selected Hand Panel */}
-            <div className="flex-1 flex flex-col gap-4">
-              {/* Chart header */}
-              <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <h2 className="text-sm font-medium text-foreground">
-                    Tabela de Ranges — {position}
-                  </h2>
+            {/* Chart Area */}
+            <div className="lg:col-span-8 flex flex-col gap-6">
+              {/* Main Grid Card */}
+              <div className="rounded-2xl border border-white/10 bg-zinc-900/60 p-5 shadow-2xl backdrop-blur-md">
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-1 bg-emerald-500 rounded-full" />
+                    <div>
+                      <h2 className="text-lg font-black text-white">Grid de Estratégia</h2>
+                      <p className="text-[10px] text-zinc-500 uppercase tracking-widest">
+                        {POSITION_LABELS[position]} · {scenario === "RFI" ? "Raise First In" : scenario === "vs3Bet" ? "Defesa vs Open" : "vs 3-Bet"}
+                      </p>
+                    </div>
+                  </div>
+                  
                   <div className="flex items-center gap-2">
                     {filterAction && (
                       <button
                         onClick={() => setFilterAction(null)}
-                        className="flex items-center gap-1 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-400 hover:text-white transition-colors"
+                        className="flex items-center gap-1.5 rounded-full bg-zinc-800 px-3 py-1 text-[10px] font-bold text-zinc-400 hover:text-white transition-all hover:bg-zinc-700"
                       >
-                        <X className="h-2.5 w-2.5" /> Limpar filtro
+                        <X className="h-3 w-3" /> Limpar Filtro
                       </button>
                     )}
-                    <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">
-                      {TABLE_SIZE_LABELS[tableSize]}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {scenario === "RFI"
-                        ? "Abrir a Mão"
-                        : scenario === "vs3Bet"
-                          ? "Contra Raise"
-                          : "Contra 3-Bet"}
-                    </span>
+                    <div className="rounded-lg bg-zinc-950 px-3 py-1 text-[10px] font-mono text-zinc-500 border border-white/5">
+                      {getComboCount(selectedHand || "AA")} Combos
+                    </div>
                   </div>
                 </div>
+
                 <RangeChart
                   range={range}
                   scenario={scenario}
@@ -209,24 +230,28 @@ export function PokerTrainer() {
 
               {/* Selected Hand Detail Panel */}
               {selectedHand && selectedAction && selectedType && (
-                <div className="rounded-xl border border-zinc-700 bg-zinc-900/80 p-4 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-2 duration-200">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      {/* Big hand name */}
-                      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-zinc-800 border border-zinc-700 shadow-inner">
-                        <span className="text-2xl font-black font-mono text-white">{selectedHand}</span>
+                <div className="rounded-2xl border-2 border-emerald-500/20 bg-zinc-900/80 p-5 backdrop-blur-xl shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+                  <div className="flex items-start justify-between gap-6">
+                    <div className="flex items-center gap-5">
+                      {/* Premium card look */}
+                      <div className="flex h-20 w-16 flex-col items-center justify-center rounded-xl bg-zinc-950 border border-white/10 shadow-2xl ring-1 ring-white/5">
+                        <span className="text-3xl font-black font-mono text-white tracking-tighter">{selectedHand}</span>
+                        <div className="mt-1 h-1 w-6 rounded-full bg-emerald-500/40" />
                       </div>
 
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={cn("rounded-md px-2 py-0.5 text-xs font-bold", ACTION_COLORS[selectedAction])}>
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={cn("rounded-md px-3 py-1 text-[11px] font-black uppercase tracking-wider", ACTION_COLORS[selectedAction])}>
                             {getActionLabel(selectedAction, scenario)}
                           </span>
-                          <span className="text-xs text-zinc-500">
-                            {HAND_TYPE_LABEL[selectedType]} · {getComboCount(selectedHand)} combos
+                          <span className="rounded-md bg-zinc-800 px-2 py-1 text-[10px] font-bold text-zinc-400">
+                            {HAND_TYPE_LABEL[selectedType]}
+                          </span>
+                          <span className="text-[10px] text-zinc-500 font-mono">
+                             {getComboCount(selectedHand)} combinações
                           </span>
                         </div>
-                        <p className="text-xs text-zinc-400 leading-relaxed max-w-xs">
+                        <p className="text-sm text-zinc-300 leading-relaxed max-w-xl font-medium">
                           {getHandTip(selectedHand, selectedAction, scenario)}
                         </p>
                       </div>
@@ -234,43 +259,45 @@ export function PokerTrainer() {
 
                     <button
                       onClick={() => setSelectedHand(null)}
-                      className="shrink-0 rounded-lg p-1.5 text-zinc-600 hover:text-white hover:bg-zinc-800 transition-colors"
+                      className="shrink-0 rounded-full p-2 text-zinc-600 hover:text-white hover:bg-white/5 transition-all"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-5 w-5" />
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Info Section */}
-              <div className="grid gap-4 sm:grid-cols-2">
+              {/* Quick Info Grid */}
+              <div className="grid gap-6 sm:grid-cols-2">
                 <InfoCard
-                  title="Como ler a tabela"
+                  icon={<Info className="h-4 w-4 text-emerald-500" />}
+                  title="Fundamentos"
                   items={[
-                    "Diagonal = pares (AA, KK, QQ...)",
-                    "Acima da diagonal = suited (AKs, AQs...)",
-                    "Abaixo da diagonal = offsuit (AKo, AQo...)",
+                    "Diagonal Principal: Pares (Pocket Pairs)",
+                    "Acima da Diagonal: Mãos Suited (Mesmo naipe)",
+                    "Abaixo da Diagonal: Mãos Offsuit (Naipes diferentes)",
                   ]}
                 />
                 <InfoCard
-                  title="Dicas por formato de mesa"
+                   icon={<Users className="h-4 w-4 text-emerald-500" />}
+                  title="Contexto de Mesa"
                   items={
                     tableSize === "9max"
                       ? [
-                          "9-max tem ranges mais apertados nas posições iniciais",
-                          "LJ e HJ são posições intermediárias",
-                          "BTN e SB continuam com ranges amplos",
+                          "Mesa cheia exige ranges extremamente tight no UTG",
+                          "Roubo de blinds é mais rentável do CO e BTN",
+                          "Cuidado com 'cold 4-bets' de jogadores em EP",
                         ]
                       : tableSize === "headsup"
                         ? [
-                            "Heads-up tem ranges muito mais amplos",
-                            "BTN/SB abre quase tudo",
-                            "BB defende amplo contra raises do BTN",
+                            "Heads-up é sobre agressão constante",
+                            "O BTN abre ~80-100% das mãos",
+                            "O BB deve defender agressivamente com 3-bets",
                           ]
                         : [
-                            "Posições iniciais (UTG/MP) = ranges mais apertados",
-                            "Posições finais (CO/BTN) = ranges mais amplos",
-                            "Blinds (SB/BB) = defesa e ranges de 3-bet",
+                            "Posições iniciais (EP) = Conservador",
+                            "Posições finais (LP) = Agressivo",
+                            "SB vs BB é a batalha de ranges mais amplos",
                           ]
                   }
                 />
@@ -285,14 +312,17 @@ export function PokerTrainer() {
   )
 }
 
-function InfoCard({ title, items }: { title: string; items: string[] }) {
+function InfoCard({ title, items, icon }: { title: string; items: string[]; icon?: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <h3 className="mb-2 text-sm font-medium text-foreground">{title}</h3>
-      <ul className="flex flex-col gap-1.5">
+    <div className="rounded-2xl border border-white/5 bg-zinc-900/30 p-5 backdrop-blur-sm">
+      <div className="flex items-center gap-2 mb-4">
+        {icon}
+        <h3 className="text-xs font-black uppercase tracking-widest text-white">{title}</h3>
+      </div>
+      <ul className="space-y-3">
         {items.map((item, i) => (
-          <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-            <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+          <li key={i} className="flex items-start gap-3 text-xs text-zinc-400 leading-snug">
+            <div className="mt-1 h-1 w-1 shrink-0 rounded-full bg-emerald-500/50" />
             {item}
           </li>
         ))}
@@ -300,3 +330,4 @@ function InfoCard({ title, items }: { title: string; items: string[] }) {
     </div>
   )
 }
+

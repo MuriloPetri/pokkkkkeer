@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
       }
 
       // ── Pagamento confirmado → emite cookie JWT seguro ─────────────
-      const jwtToken = signAccessToken(chargeId, email)
+      const jwtToken = await signAccessToken(chargeId, email)
 
       const response = NextResponse.json({ paid: true })
       response.cookies.set(ACCESS_COOKIE_NAME, jwtToken, {
