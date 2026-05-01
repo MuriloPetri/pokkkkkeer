@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { PIX_AMOUNT_CENTS, PRODUCT_NAME } from "@/lib/pix-config"
+import { db } from "@/lib/db"
+import bcrypt from "bcryptjs"
 
 /**
  * POST /api/pix/create
@@ -8,10 +10,10 @@ import { PIX_AMOUNT_CENTS, PRODUCT_NAME } from "@/lib/pix-config"
  */
 export async function POST(req: NextRequest) {
   try {
-    const { email, firstName, lastName, cpf } = await req.json()
+    const { email, firstName, lastName, cpf, password } = await req.json()
 
-    if (!email || !firstName || !cpf) {
-      return NextResponse.json({ error: "Preencha todos os campos corretamente" }, { status: 400 })
+    if (!email || !firstName || !cpf || !password) {
+      return NextResponse.json({ error: "Preencha todos os campos e crie uma senha" }, { status: 400 })
     }
 
     const token = process.env.MERCADOPAGO_ACCESS_TOKEN
@@ -58,6 +60,38 @@ export async function POST(req: NextRequest) {
     }
 
     const transactionData = data.point_of_interaction?.transaction_data
+
+    // Criar ou atualizar usuário no banco com a nova senha
+    const hashedPassword = await bcrypt.hash(password, 10)
+    const safeEmail = email.trim().toLowerCase()
+    
+    let user = await db.user.findUnique({ where: { email: safeEmail } })
+    if (user) {
+      // Atualiza a senha se o usuário tentar pagar de novo (esquecimento, etc)
+      user = await db.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword, name: firstName, cpf: cpf.replace(/\D/g, "") },
+      })
+    } else {
+      user = await db.user.create({
+        data: {
+          email: safeEmail,
+          name: firstName,
+          cpf: cpf.replace(/\D/g, ""),
+          password: hashedPassword,
+        },
+      })
+    }
+
+    // Salva a tentativa de pagamento
+    await db.payment.create({
+      data: {
+        userId: user.id,
+        chargeId: String(data.id),
+        status: data.status || "pending",
+        amount: amount,
+      },
+    })
 
     return NextResponse.json({
       chargeId: data.id,

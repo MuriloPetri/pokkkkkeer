@@ -22,6 +22,7 @@ export default function PaywallPage() {
   const [email, setEmail] = useState("")
   const [firstName, setFirstName] = useState("")
   const [cpf, setCpf] = useState("")
+  const [password, setPassword] = useState("")
   
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -74,7 +75,7 @@ export default function PaywallPage() {
       const res = await fetch("/api/pix/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, firstName, lastName: "", cpf }),
+        body: JSON.stringify({ email, firstName, lastName: "", cpf, password }),
       })
       const data = await res.json()
 
@@ -215,6 +216,18 @@ export default function PaywallPage() {
                     />
                   </div>
 
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                    <input
+                      type="password"
+                      required
+                      placeholder="Crie uma senha de acesso"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full rounded-xl border border-zinc-700 bg-zinc-900 py-3 pl-10 pr-4 text-sm text-white placeholder-zinc-600 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600/50"
+                    />
+                  </div>
+
                   {error && (
                     <div className="flex items-start gap-2 rounded-lg border border-red-900/50 bg-red-950/30 p-3 text-xs text-red-400">
                       <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -316,6 +329,12 @@ export default function PaywallPage() {
         <p className="mt-6 text-center text-xs text-zinc-700">
           Site para fins educacionais. Pagamento processado de forma segura via Mercado Pago.
         </p>
+
+        <div className="mt-8 text-center">
+          <a href="/login" className="text-sm text-zinc-400 hover:text-white underline decoration-zinc-700 underline-offset-4">
+            Já comprou? Faça login para acessar.
+          </a>
+        </div>
       </div>
     </div>
   )

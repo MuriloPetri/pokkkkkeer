@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { signAccessToken } from "@/lib/pix-jwt"
 import { ACCESS_COOKIE_NAME, ACCESS_DURATION_DAYS } from "@/lib/pix-config"
+import { db } from "@/lib/db"
 
 /**
  * GET /api/pix/status?id=123456&email=user@email.com
@@ -39,6 +40,25 @@ export async function GET(req: NextRequest) {
     const status: string = data.status ?? "pending"
 
     if (status === "approved") {
+      // Atualiza o banco de dados
+      const payment = await db.payment.findUnique({
+        where: { chargeId: String(chargeId) },
+        include: { user: true }
+      })
+
+      if (payment && !payment.user.paidAt) {
+        await db.$transaction([
+          db.payment.update({
+            where: { id: payment.id },
+            data: { status: "approved" }
+          }),
+          db.user.update({
+            where: { id: payment.userId },
+            data: { paidAt: new Date() }
+          })
+        ])
+      }
+
       // ── Pagamento confirmado → emite cookie JWT seguro ─────────────
       const jwtToken = signAccessToken(chargeId, email)
 

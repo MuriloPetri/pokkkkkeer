@@ -10,8 +10,8 @@ import { ACCESS_COOKIE_NAME } from "@/lib/pix-config"
 export default function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // Página do paywall nunca é bloqueada (evita loop de redirect)
-  if (pathname === "/paywall") {
+  // Página do paywall e login nunca são bloqueadas
+  if (pathname === "/paywall" || pathname === "/login") {
     return NextResponse.next()
   }
 
@@ -29,6 +29,6 @@ export default function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api/pix|paywall|_next/static|_next/image|favicon|qrcode|icons|manifest|sw\\.js|workbox).*)",
+    "/((?!api/pix|api/auth|login|paywall|_next/static|_next/image|favicon|qrcode|icons|manifest|sw\\.js|workbox).*)",
   ],
 }
