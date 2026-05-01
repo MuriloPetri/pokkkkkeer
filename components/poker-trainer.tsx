@@ -54,6 +54,13 @@ export function PokerTrainer() {
     }
   }, [tableSize, position])
 
+  // If UTG is selected and scenario is vs3Bet (not applicable), switch to RFI
+  useEffect(() => {
+    if (['UTG', 'UTG1', 'UTG2'].includes(position) && scenario === 'vs3Bet') {
+      setScenario('RFI')
+    }
+  }, [position, scenario])
+
   // Clear filter and selection when scenario/position changes
   useEffect(() => {
     setFilterAction(null)
@@ -152,7 +159,7 @@ export function PokerTrainer() {
                 onSelect={setPosition}
                 tableSize={tableSize}
               />
-              <ScenarioSelector selected={scenario} onSelect={setScenario} />
+              <ScenarioSelector selected={scenario} onSelect={setScenario} position={position} />
               <RangeLegend
                 range={range}
                 scenario={scenario}
