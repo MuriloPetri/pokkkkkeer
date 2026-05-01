@@ -6,8 +6,11 @@ import { ACCESS_DURATION_DAYS } from "./pix-config"
 
 const encoder = new TextEncoder()
 
-function base64urlEncode(buf: ArrayBuffer): string {
-  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+function base64urlEncode(buf: BufferSource): string {
+  const uint8 = buf instanceof ArrayBuffer ? new Uint8Array(buf) : new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
+  let binary = ""
+  uint8.forEach((b) => (binary += String.fromCharCode(b)))
+  return btoa(binary)
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=/g, "")
@@ -58,14 +61,15 @@ export async function signAccessToken(chargeId: string, email: string): Promise<
 
 export async function verifyAccessToken(token: string): Promise<TokenPayload | null> {
   try {
-    const [header, data, sig] = token.split(".")
-    if (!header || !data || !sig) return null
+    const parts = token.split(".")
+    if (parts.length !== 3) return null
+    const [header, data, sig] = parts
 
     const key = await getSecretKey()
     const message = `${header}.${data}`
     const sigBuf = base64urlDecode(sig)
     
-    const isValid = await crypto.subtle.verify("HMAC", key, sigBuf, encoder.encode(message))
+    const isValid = await crypto.subtle.verify("HMAC", key, sigBuf as any, encoder.encode(message))
     if (!isValid) return null
 
     const payload: TokenPayload = JSON.parse(new TextDecoder().decode(base64urlDecode(data)))
@@ -81,6 +85,7 @@ export async function verifyAccessToken(token: string): Promise<TokenPayload | n
 /** Lê e valida o cookie de acesso (server component / middleware) */
 export async function getAccessFromCookie(cookieValue: string | undefined): Promise<TokenPayload | null> {
   if (!cookieValue) return null
-  return verifyAccessToken(cookieValue)
+  return await verifyAccessToken(cookieValue)
 }
+
 
