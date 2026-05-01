@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import {
-  Lock, Mail, ExternalLink, Loader2,
-  Check, ShieldCheck, Zap, Trophy, AlertCircle,
+  Lock, Mail, User, CreditCard, Loader2,
+  Check, ShieldCheck, Zap, Trophy, AlertCircle, Copy
 } from "lucide-react"
 import { PIX_AMOUNT_DISPLAY, PRODUCT_NAME } from "@/lib/pix-config"
+import Image from "next/image"
 
-type Step = "email" | "paying" | "success"
+type Step = "info" | "paying" | "success"
 
 const FEATURES = [
   "Ranges GTO otimizados para 6-max e 9-max",
@@ -17,12 +18,19 @@ const FEATURES = [
 ]
 
 export default function PaywallPage() {
-  const [step, setStep] = useState<Step>("email")
+  const [step, setStep] = useState<Step>("info")
   const [email, setEmail] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [cpf, setCpf] = useState("")
+  
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  
   const [chargeId, setChargeId] = useState("")
-  const [payUrl, setPayUrl] = useState("")
+  const [qrCodeString, setQrCodeString] = useState("")
+  const [qrCodeBase64, setQrCodeBase64] = useState("")
+  const [copied, setCopied] = useState(false)
+  
   const [pollCount, setPollCount] = useState(0)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -56,7 +64,7 @@ export default function PaywallPage() {
     return stopPolling
   }, [step, chargeId, email, checkStatus, stopPolling])
 
-  // ── Criar cobrança ───────────────────────────────────────────────────
+  // ── Criar cobrança Mercado Pago ──────────────────────────────────────
   const handleCreateCharge = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
@@ -66,23 +74,41 @@ export default function PaywallPage() {
       const res = await fetch("/api/pix/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, firstName, lastName: "", cpf }),
       })
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || "Erro ao gerar cobrança. Tente novamente.")
+        setError(data.error || "Erro ao gerar cobrança. Verifique seus dados.")
         return
       }
 
       setChargeId(data.chargeId)
-      setPayUrl(data.url)
+      setQrCodeString(data.qrCodeString)
+      setQrCodeBase64(data.qrCodeBase64)
       setStep("paying")
     } catch {
       setError("Erro de conexão. Verifique sua internet e tente novamente.")
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleCopy = () => {
+    if (!qrCodeString) return
+    navigator.clipboard.writeText(qrCodeString)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  // Mascara simples para CPF na digitação
+  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let v = e.target.value.replace(/\D/g, "")
+    if (v.length > 11) v = v.slice(0, 11)
+    v = v.replace(/(\d{3})(\d)/, "$1.$2")
+    v = v.replace(/(\d{3})(\d)/, "$1.$2")
+    v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2")
+    setCpf(v)
   }
 
   return (
@@ -122,7 +148,7 @@ export default function PaywallPage() {
                 <p className="text-sm leading-relaxed text-zinc-400">
                   Pagamento único de{" "}
                   <span className="font-bold text-white">R$ {PIX_AMOUNT_DISPLAY}</span>{" "}
-                  via PIX. Acesso vitalício liberado automaticamente após confirmação.
+                  via PIX. Acesso vitalício liberado automaticamente.
                 </p>
               </div>
               <ul className="space-y-3">
@@ -145,12 +171,36 @@ export default function PaywallPage() {
             {/* Painel de pagamento */}
             <div className="flex flex-col items-center justify-center gap-6 border-t border-zinc-800 bg-zinc-950/40 p-8 lg:border-l lg:border-t-0 lg:p-10">
 
-              {/* ── ETAPA 1: E-mail ────────────────────────────────── */}
-              {step === "email" && (
-                <form onSubmit={handleCreateCharge} className="w-full space-y-5">
-                  <div className="text-center space-y-1">
-                    <p className="font-semibold text-white">Informe seu e-mail</p>
-                    <p className="text-xs text-zinc-500">Para gerar sua cobrança PIX</p>
+              {/* ── ETAPA 1: Dados do Cliente ────────────────────────── */}
+              {step === "info" && (
+                <form onSubmit={handleCreateCharge} className="w-full space-y-4">
+                  <div className="text-center space-y-1 mb-2">
+                    <p className="font-semibold text-white">Dados para Pagamento</p>
+                    <p className="text-xs text-zinc-500">Exigido pelo Banco Central para gerar PIX</p>
+                  </div>
+
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="Nome e Sobrenome"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="w-full rounded-xl border border-zinc-700 bg-zinc-900 py-3 pl-10 pr-4 text-sm text-white placeholder-zinc-600 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600/50"
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <CreditCard className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="CPF"
+                      value={cpf}
+                      onChange={handleCpfChange}
+                      className="w-full rounded-xl border border-zinc-700 bg-zinc-900 py-3 pl-10 pr-4 text-sm text-white placeholder-zinc-600 outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600/50"
+                    />
                   </div>
 
                   <div className="relative">
@@ -175,7 +225,7 @@ export default function PaywallPage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-4 text-base font-bold text-white shadow-lg shadow-green-900/30 transition-all hover:bg-green-500 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-4 text-base font-bold text-white shadow-lg shadow-green-900/30 transition-all hover:bg-green-500 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {loading ? (
                       <><Loader2 className="h-4 w-4 animate-spin" /> Gerando PIX...</>
@@ -188,45 +238,62 @@ export default function PaywallPage() {
 
               {/* ── ETAPA 2: Aguardando pagamento ──────────────────── */}
               {step === "paying" && (
-                <div className="w-full space-y-5">
+                <div className="w-full flex flex-col items-center space-y-5">
                   <div className="text-center space-y-1">
-                    <p className="font-semibold text-white">Pague via PIX</p>
-                    <p className="text-xs text-zinc-500">
-                      O acesso é liberado automaticamente após confirmação
-                    </p>
+                    <p className="font-semibold text-white">Escaneie o QR Code</p>
+                    <p className="text-xs text-zinc-500">Ou copie o código "PIX Copia e Cola"</p>
                   </div>
 
-                  {/* Botão para abrir página de pagamento */}
-                  <a
-                    href={payUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-4 text-base font-bold text-white shadow-lg shadow-green-900/30 transition-all hover:bg-green-500 hover:scale-[1.02]"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Abrir QR Code PIX — R$ {PIX_AMOUNT_DISPLAY}
-                  </a>
+                  {/* QR Code MP */}
+                  <div className="rounded-2xl bg-white p-3 shadow-xl">
+                    {qrCodeBase64 ? (
+                      <Image
+                        src={`data:image/jpeg;base64,${qrCodeBase64}`}
+                        alt="QR Code PIX Mercado Pago"
+                        width={180}
+                        height={180}
+                        className="rounded-lg"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="h-[180px] w-[180px] bg-zinc-200 animate-pulse rounded-lg" />
+                    )}
+                  </div>
 
-                  <div className="flex items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+                  {/* Copia e Cola */}
+                  <div className="w-full space-y-1.5">
+                    <button
+                      onClick={handleCopy}
+                      className="group flex w-full items-center justify-between rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 transition-all hover:border-green-700 hover:bg-zinc-800/80"
+                    >
+                      <code className="max-w-[200px] truncate font-mono text-xs text-green-400">
+                        {qrCodeString || "Gerando..."}
+                      </code>
+                      <span className="ml-2 shrink-0">
+                        {copied ? (
+                          <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <Copy className="h-4 w-4 text-zinc-500 transition-colors group-hover:text-green-400" />
+                        )}
+                      </span>
+                    </button>
+                  </div>
+
+                  <div className="flex w-full items-center justify-center gap-2 rounded-xl border border-green-900/30 bg-green-950/20 p-4">
                     <Loader2 className="h-4 w-4 animate-spin text-green-500" />
-                    <span className="text-sm text-zinc-400">
-                      Aguardando pagamento
-                      <span className="text-zinc-600 ml-1">
+                    <span className="text-sm text-zinc-300">
+                      Aguardando confirmação
+                      <span className="text-green-500/50 ml-1 text-xs">
                         ({Math.floor(pollCount * 3)}s)
                       </span>
                     </span>
                   </div>
 
-                  <p className="text-center text-[11px] text-zinc-600">
-                    Após pagar, o acesso é liberado em segundos automaticamente.
-                    Não feche esta aba.
-                  </p>
-
                   <button
-                    onClick={() => { stopPolling(); setStep("email"); setError("") }}
-                    className="w-full text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
+                    onClick={() => { stopPolling(); setStep("info"); setError("") }}
+                    className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors mt-2"
                   >
-                    ← Voltar e trocar e-mail
+                    ← Cancelar e voltar
                   </button>
                 </div>
               )}
@@ -247,7 +314,7 @@ export default function PaywallPage() {
         </div>
 
         <p className="mt-6 text-center text-xs text-zinc-700">
-          Site para fins educacionais. Pagamento processado via AbacatePay.
+          Site para fins educacionais. Pagamento processado de forma segura via Mercado Pago.
         </p>
       </div>
     </div>

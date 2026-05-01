@@ -3,45 +3,48 @@ import { PIX_AMOUNT_CENTS, PRODUCT_NAME } from "@/lib/pix-config"
 
 /**
  * POST /api/pix/create
- * Body: { email: string, name?: string }
- * Cria uma cobrança PIX no AbacatePay e retorna os dados para o frontend.
+ * Body: { email: string, firstName: string, lastName: string, cpf: string }
+ * Cria uma cobrança PIX no Mercado Pago.
  */
 export async function POST(req: NextRequest) {
   try {
-    const { email, name } = await req.json()
+    const { email, firstName, lastName, cpf } = await req.json()
 
-    if (!email || typeof email !== "string" || !email.includes("@")) {
-      return NextResponse.json({ error: "E-mail inválido" }, { status: 400 })
+    if (!email || !firstName || !cpf) {
+      return NextResponse.json({ error: "Preencha todos os campos corretamente" }, { status: 400 })
     }
 
-    const apiKey = process.env.ABACATEPAY_API_KEY
-    if (!apiKey || apiKey === "SEU_API_KEY_ABACATEPAY_AQUI") {
+    const token = process.env.MERCADOPAGO_ACCESS_TOKEN
+    if (!token || token === "APP_USR-SEU_ACCESS_TOKEN_AQUI") {
       return NextResponse.json(
-        { error: "AbacatePay não configurado. Adicione ABACATEPAY_API_KEY no .env.local" },
+        { error: "Mercado Pago não configurado no .env.local" },
         { status: 503 }
       )
     }
 
-    const res = await fetch("https://api.abacatepay.com/v1/billing/create", {
+    // Mercado Pago usa o valor em Reais (float), não em centavos
+    const amount = PIX_AMOUNT_CENTS / 100
+
+    const res = await fetch("https://api.mercadopago.com/v1/payments", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
+        // Chave de idempotência (evita cobrança dupla se houver instabilidade)
+        "X-Idempotency-Key": crypto.randomUUID(),
       },
       body: JSON.stringify({
-        frequency: "ONE_TIME",
-        methods: ["PIX"],
-        products: [
-          {
-            externalId: "poker-access",
-            name: PRODUCT_NAME,
-            quantity: 1,
-            price: PIX_AMOUNT_CENTS, // centavos
-          },
-        ],
-        customer: {
-          name: name?.trim() || email.split("@")[0],
+        transaction_amount: amount,
+        description: PRODUCT_NAME,
+        payment_method_id: "pix",
+        payer: {
           email: email.trim().toLowerCase(),
+          first_name: firstName.trim(),
+          last_name: lastName?.trim() || "",
+          identification: {
+            type: "CPF",
+            number: cpf.replace(/\D/g, ""), // Limpa tudo que não for número
+          },
         },
       }),
     })
@@ -49,21 +52,21 @@ export async function POST(req: NextRequest) {
     const data = await res.json()
 
     if (!res.ok) {
-      console.error("[pix/create] AbacatePay error:", data)
-      return NextResponse.json(
-        { error: data?.message || "Erro ao criar cobrança" },
-        { status: 502 }
-      )
+      console.error("[pix/create] MercadoPago error:", data)
+      const msg = data.cause?.[0]?.description || data.message || "Erro ao criar cobrança"
+      return NextResponse.json({ error: msg }, { status: 400 })
     }
 
-    const billing = data?.data
+    const transactionData = data.point_of_interaction?.transaction_data
+
     return NextResponse.json({
-      chargeId: billing?.id,
-      url: billing?.url,          // URL da página de pagamento AbacatePay
-      status: billing?.status,    // "PENDING"
+      chargeId: data.id,
+      qrCodeString: transactionData?.qr_code,
+      qrCodeBase64: transactionData?.qr_code_base64,
+      status: data.status, // "pending"
     })
   } catch (err) {
     console.error("[pix/create]", err)
-    return NextResponse.json({ error: "Erro interno" }, { status: 500 })
+    return NextResponse.json({ error: "Erro interno do servidor" }, { status: 500 })
   }
 }
