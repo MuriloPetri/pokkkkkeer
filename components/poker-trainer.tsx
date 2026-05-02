@@ -21,10 +21,12 @@ import { PositionSelector } from "./position-selector"
 import { ScenarioSelector } from "./scenario-selector"
 import { RangeLegend } from "./range-legend"
 import { TrainingMode } from "./training-mode"
+import { TournamentConfig } from "./tournament-config"
+import { LearnToPlay } from "./learn-to-play"
 import { cn } from "@/lib/utils"
-import { BookOpen, Crosshair, Users, X, Info } from "lucide-react"
+import { BookOpen, Crosshair, Users, X, Info, Trophy, GraduationCap } from "lucide-react"
 
-type Tab = "chart" | "training"
+type Tab = "chart" | "training" | "tournament" | "learn"
 
 const TABLE_SIZES: TableSize[] = ["6max", "9max", "headsup"]
 
@@ -126,6 +128,30 @@ export function PokerTrainer() {
             >
               <Crosshair className="h-4 w-4" />
               <span className="hidden sm:inline">Treinar</span>
+            </button>
+            <button
+              onClick={() => setTab("tournament")}
+              className={cn(
+                "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-all",
+                tab === "tournament"
+                  ? "bg-emerald-500 text-zinc-950 shadow-md"
+                  : "text-zinc-400 hover:text-white hover:bg-white/5"
+              )}
+            >
+              <Trophy className="h-4 w-4" />
+              <span className="hidden sm:inline">Torneio</span>
+            </button>
+            <button
+              onClick={() => setTab("learn")}
+              className={cn(
+                "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition-all",
+                tab === "learn"
+                  ? "bg-emerald-500 text-zinc-950 shadow-md"
+                  : "text-zinc-400 hover:text-white hover:bg-white/5"
+              )}
+            >
+              <GraduationCap className="h-4 w-4" />
+              <span className="hidden sm:inline">Aprender</span>
             </button>
           </div>
         </div>
@@ -304,8 +330,12 @@ export function PokerTrainer() {
               </div>
             </div>
           </div>
-        ) : (
+        ) : tab === "training" ? (
           <TrainingMode tableSize={tableSize} />
+        ) : tab === "tournament" ? (
+          <TournamentConfig />
+        ) : (
+          <LearnToPlay />
         )}
       </main>
     </div>
